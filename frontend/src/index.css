@@ -1,0 +1,58 @@
+/* =========================================================
+   Moonveil Hotel — Global Base
+   Dark Blue + Gold Theme
+   ========================================================= */
+
+:root {
+  --bg-very-dark:   #0a1628;
+  --bg-dark:        #132f4c;
+  --bg-border:      #1e3a5f;
+  --gold:           #d4af37;
+  --gold-deep:      #b8860b;
+  --gold-soft:      #e8c96a;
+  --text-light:     #e0e0e0;
+  --text-muted:     #a0a0a0;
+  --danger:         #e74c3c;
+  --success:        #2ecc71;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-very-dark);
+  color: var(--text-light);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--gold);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover { color: var(--gold-soft); }
+
+img { display: block; max-width: 100%; }
+
+::selection {
+  background: var(--gold);
+  color: var(--bg-very-dark);
+}
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-very-dark); }
+::-webkit-scrollbar-thumb {
+  background: var(--bg-border);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--gold-deep); }
