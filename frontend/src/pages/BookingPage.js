@@ -395,7 +395,7 @@ export default function BookingPage() {
       `}</style>
 
       <h1>Book: {room.name}</h1>
-      <p className="muted">₱{Number(room.price).toFixed(2)} / night &bull; Max Capacity: {maxCapacity} Guests (Standard check-in: 2:00 PM, Check-out: 12:00 PM)</p>
+      <p className="muted">₱{Number(room.price).toFixed(2)} / night &bull; Max Capacity: {maxCapacity} Guests </p>
 
       <div className="booking-grid">
         <form className="booking-form card" onSubmit={submit}>
