@@ -924,3 +924,121 @@ textarea.input { resize: vertical; min-height: 70px; font-family: inherit; }
   flex-wrap: wrap;
   margin-top: 10px;
 }
+
+/* ─── The Hotel Page (Dark Blue Font #132F4C Layout) ────────── */
+.the-hotel-page {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.the-hotel-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.the-hotel-cards {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.turquoise-card {
+  background-color: #48c9b0;
+  color: #132F4C; /* Main text color updated to #132F4C */
+  border-radius: 20px;
+  padding: 40px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 1fr;
+  align-items: center;
+  gap: 32px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+  width: 100%;
+}
+
+.turquoise-card.two-col {
+  grid-template-columns: 1.4fr 1fr;
+}
+
+.turquoise-card.full-col {
+  grid-template-columns: 1fr;
+}
+
+.turquoise-card h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-style: italic;
+  margin-bottom: 12px;
+  color: #132F4C; /* Title color updated to #132F4C */
+}
+
+.turquoise-card p {
+  font-size: 0.98rem;
+  line-height: 1.65;
+  font-style: italic;
+  color: #132F4C; /* Body paragraph color updated to #132F4C */
+}
+
+.turquoise-card img {
+  width: 100%;
+  height: 230px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.hours-column h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-style: italic;
+  color: #132F4C;
+  margin-bottom: 8px;
+}
+
+.hours-column p {
+  font-size: 0.92rem;
+  margin-bottom: 4px;
+  color: #132F4C;
+}
+
+.location-pin {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 0.98rem;
+  margin-bottom: 10px;
+  color: #132F4C;
+}
+
+.policies-inner-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  font-size: 0.95rem;
+  font-style: italic;
+  font-weight: 600;
+  color: #132F4C;
+}
+
+.policies-inner-grid strong {
+  color: #132F4C;
+}
+
+@media (max-width: 1024px) {
+  .turquoise-card, .turquoise-card.two-col {
+    grid-template-columns: 1fr;
+  }
+  .turquoise-card img {
+    height: 250px;
+  }
+}

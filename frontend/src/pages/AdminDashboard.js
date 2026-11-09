@@ -3,8 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 
-const ADMIN_TABS = ['Overview', 'Bookings', 'Rooms', 'Revenue', 'Users', 'Reviews', 'Settings', 'Hotel Info'];
-const STAFF_TABS = ['Overview', 'Bookings', 'Rooms', 'Users', 'Reviews', 'Profile'];
+const ADMIN_TABS = ['Overview', 'Bookings', 'Rooms', 'Revenue', 'Users', 'Reviews', 'Inquiries', 'Archive', 'Settings', 'Hotel Info'];
+const STAFF_TABS = ['Overview', 'Bookings', 'Rooms', 'Users', 'Reviews', 'Inquiries', 'Profile'];
 
 // Preset item lists with default pricing
 const AMENITY_PRESETS = [
@@ -77,6 +77,8 @@ export default function AdminDashboard({ role = 'admin' }) {
         {!isAdmin && tab === 'Profile' && <StaffProfile />}
         {tab === 'Users'      && <UsersTab role={role} />}
         {tab === 'Reviews'    && <ReviewsTab />}
+        {tab === 'Inquiries'  && <InquiriesTab />}
+        {isAdmin && tab === 'Archive' && <AdminArchive />}
         {isAdmin && tab === 'Settings' && <SettingsTab />}
         {isAdmin && tab === 'Hotel Info' && <HotelInfoTab />}
       </section>
@@ -367,6 +369,267 @@ function ReviewsTab() {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── Inquiries Tab (Contact Us Messages) ──────────────── */
+function InquiriesTab() {
+  const [inquiries, setInquiries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function loadInquiries() {
+    setLoading(true);
+    try {
+      const data = await api.getInquiries();
+      // Filter out archived items so they vanish from the active inbox
+      const activeInquiries = (Array.isArray(data) ? data : []).filter(
+        (item) => item.status !== 'Archived'
+      );
+      setInquiries(activeInquiries);
+    } catch (e) {
+      console.error('Failed to load inquiries:', e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadInquiries();
+  }, []);
+
+  async function handleStatusChange(id, newStatus) {
+    try {
+      await api.updateInquiryStatus(id, newStatus);
+      await loadInquiries();
+    } catch (e) {
+      alert(e.message || 'Failed to update inquiry status');
+    }
+  }
+
+  if (loading) return <div className="loading">Loading guest inquiries…</div>;
+
+  return (
+    <div>
+      <h1>Guest Inquiries & Messages</h1>
+      <p className="muted" style={{ marginBottom: '20px' }}>
+        Review and manage questions submitted by guests via the "Contact Us" form on The Hotel page.
+      </p>
+
+      <div className="card" style={{ padding: '24px' }}>
+        <h3 style={{ marginBottom: '16px', color: '#fff' }}>All Guest Messages</h3>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--gold)' }}>
+                <th style={{ padding: '12px' }}>Date</th>
+                <th style={{ padding: '12px' }}>Guest Name</th>
+                <th style={{ padding: '12px' }}>Email</th>
+                <th style={{ padding: '12px' }}>Message</th>
+                <th style={{ padding: '12px' }}>Status</th>
+                <th style={{ padding: '12px' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inquiries.length > 0 ? (
+                inquiries.map((item) => (
+                  <tr key={item.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: '12px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                      {item.created_at ? formatDateReadable(item.created_at) : '—'}
+                    </td>
+                    <td style={{ padding: '12px', fontWeight: '600' }}>
+                      {item.first_name} {item.last_name}
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <a href={`mailto:${item.email}`} style={{ color: 'var(--gold)' }}>
+                        {item.email}
+                      </a>
+                    </td>
+                    <td style={{ padding: '12px', maxWidth: '300px', wordBreak: 'break-word' }}>
+                      {item.message}
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <span className={`badge ${
+                        item.status === 'Resolved' ? 'badge-confirmed' : 'badge-pending'
+                      }`}>
+                        {item.status || 'Pending'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <select
+                        value={item.status || 'Pending'}
+                        onChange={(e) => handleStatusChange(item.id, e.target.value)}
+                        style={{ fontSize: '0.8rem', padding: '6px 8px', background: 'var(--bg-very-dark)', color: 'var(--text-light)', border: '1px solid var(--bg-border)', borderRadius: '4px' }}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Resolved">Resolved</option>
+                        <option value="Archived">Archived</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" style={{ padding: '30px', textAlign: 'center', color: '#aaa' }}>
+                    No active guest inquiries or messages.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Archive Tab (Unified Inquiries & Rooms Archive) ──── */
+function AdminArchive() {
+  const [archivedInquiries, setArchivedInquiries] = useState([]);
+  const [archivedRooms, setArchivedRooms] = useState([]);
+  const [subTab, setSubTab] = useState('inquiries');
+  const [loading, setLoading] = useState(true);
+
+  async function loadArchiveData() {
+    setLoading(true);
+    try {
+      const inqs = await api.getInquiries();
+      setArchivedInquiries((inqs || []).filter(item => item.status === 'Archived'));
+
+      const rms = await api.rooms();
+      setArchivedRooms((rms || []).filter(room => room.available === 0 || room.status === 'Archived'));
+    } catch (e) {
+      console.error('Failed to load archive data:', e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadArchiveData();
+  }, []);
+
+  async function restoreInquiry(id) {
+    try {
+      await api.updateInquiryStatus(id, 'Pending');
+      await loadArchiveData();
+    } catch (e) {
+      alert(e.message || 'Failed to restore inquiry');
+    }
+  }
+
+  async function restoreRoom(id) {
+    try {
+      await api.updateRoom(id, { available: 1, status: 'Active' });
+      await loadArchiveData();
+    } catch (e) {
+      alert(e.message || 'Failed to restore room');
+    }
+  }
+
+  if (loading) return <div className="loading">Loading archive…</div>;
+
+  return (
+    <div>
+      <h1>System Archive</h1>
+      <p className="muted" style={{ marginBottom: '20px' }}>
+        Manage and restore archived guest inquiries and rooms in one centralized place.
+      </p>
+
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
+        <button
+          className={`btn ${subTab === 'inquiries' ? 'btn-gold' : 'btn-ghost'}`}
+          onClick={() => setSubTab('inquiries')}
+        >
+          Archived Inquiries ({archivedInquiries.length})
+        </button>
+        <button
+          className={`btn ${subTab === 'rooms' ? 'btn-gold' : 'btn-ghost'}`}
+          onClick={() => setSubTab('rooms')}
+        >
+          Archived Rooms ({archivedRooms.length})
+        </button>
+      </div>
+
+      {subTab === 'inquiries' ? (
+        <div className="card" style={{ padding: '24px' }}>
+          <h3 style={{ marginBottom: '16px', color: '#fff' }}>Archived Guest Messages</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--gold)' }}>
+                  <th style={{ padding: '12px' }}>Date</th>
+                  <th style={{ padding: '12px' }}>Guest Name</th>
+                  <th style={{ padding: '12px' }}>Email</th>
+                  <th style={{ padding: '12px' }}>Message</th>
+                  <th style={{ padding: '12px' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {archivedInquiries.length > 0 ? (
+                  archivedInquiries.map((item) => (
+                    <tr key={item.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '12px', fontSize: '0.85rem' }}>{formatDateReadable(item.created_at)}</td>
+                      <td style={{ padding: '12px', fontWeight: '600' }}>{item.first_name} {item.last_name}</td>
+                      <td style={{ padding: '12px' }}><a href={`mailto:${item.email}`} style={{ color: 'var(--gold)' }}>{item.email}</a></td>
+                      <td style={{ padding: '12px', maxWidth: '300px', wordBreak: 'break-word' }}>{item.message}</td>
+                      <td style={{ padding: '12px' }}>
+                        <button className="btn btn-gold small" onClick={() => restoreInquiry(item.id)}>
+                          Restore
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" style={{ padding: '30px', textAlign: 'center', color: '#aaa' }}>
+                      No archived inquiries found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="card" style={{ padding: '24px' }}>
+          <h3 style={{ marginBottom: '16px', color: '#fff' }}>Archived Rooms Inventory</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--gold)' }}>
+                  <th style={{ padding: '12px' }}>Room Name</th>
+                  <th style={{ padding: '12px' }}>Type</th>
+                  <th style={{ padding: '12px' }}>Price</th>
+                  <th style={{ padding: '12px' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {archivedRooms.length > 0 ? (
+                  archivedRooms.map((room) => (
+                    <tr key={room.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '12px', fontWeight: '600' }}>{room.name}</td>
+                      <td style={{ padding: '12px' }}>{room.type}</td>
+                      <td style={{ padding: '12px', color: 'var(--gold)' }}>₱{Number(room.price).toFixed(2)}</td>
+                      <td style={{ padding: '12px' }}>
+                        <button className="btn btn-gold small" onClick={() => restoreRoom(room.id)}>
+                          Restore Room
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" style={{ padding: '30px', textAlign: 'center', color: '#aaa' }}>
+                      No archived rooms found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -999,8 +1262,16 @@ function RoomsTab({ role }) {
 
   const load = async () => {
     setLoading(true);
-    try { setRooms(await api.rooms()); }
-    finally { setLoading(false); }
+    try {
+      const data = await api.rooms();
+      // Only show active rooms in the main inventory table
+      const activeRooms = (Array.isArray(data) ? data : []).filter(
+        (room) => room.available !== 0 && room.status !== 'Archived'
+      );
+      setRooms(activeRooms);
+    } finally {
+      setLoading(false);
+    }
   };
   useEffect(() => { load(); }, []);
 

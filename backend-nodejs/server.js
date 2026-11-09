@@ -44,7 +44,6 @@ app.post('/api/reviews', async (req, res) => {
       return res.status(400).json({ error: 'Guest name, rating, and comment are required.' });
     }
 
-    // Automatically ensure table and all required columns exist dynamically
     try {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS reviews (
@@ -95,6 +94,72 @@ app.delete('/api/reviews/:id', async (req, res) => {
 });
 // ──────────────────────────────────────────────────────────────────
 
+// ─── 3. HOTEL INQUIRIES & CONTACT US ENDPOINTS ───────────────────
+app.get('/api/inquiries', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM inquiries ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching inquiries:', err);
+    res.status(500).json({ error: 'Failed to fetch inquiries' });
+  }
+});
+
+app.post('/api/inquiries', async (req, res) => {
+  try {
+    const { firstName, lastName, email, message } = req.body;
+    
+    if (!firstName || !email || !message) {
+      return res.status(400).json({ error: 'First name, email, and message are required.' });
+    }
+
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS inquiries (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          first_name VARCHAR(100) NOT NULL,
+          last_name VARCHAR(100),
+          email VARCHAR(150) NOT NULL,
+          message TEXT NOT NULL,
+          status ENUM('Pending', 'Resolved', 'Archived') DEFAULT 'Pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (e) {}
+
+    const query = `
+      INSERT INTO inquiries (first_name, last_name, email, message, created_at)
+      VALUES (?, ?, ?, ?, NOW())
+    `;
+    const values = [firstName, lastName || '', email, message];
+    
+    const [result] = await pool.query(query, values);
+    const [created] = await pool.query('SELECT * FROM inquiries WHERE id = ?', [result.insertId]);
+    res.status(201).json(created[0] || { id: result.insertId, firstName, lastName, email, message });
+  } catch (err) {
+    console.error('Error saving inquiry:', err);
+    res.status(500).json({ error: 'Failed to submit inquiry' });
+  }
+});
+
+app.patch('/api/inquiries/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ error: 'Status is required.' });
+    }
+
+    await pool.query('UPDATE inquiries SET status = ? WHERE id = ?', [status, id]);
+    res.json({ success: true, message: 'Inquiry status updated successfully' });
+  } catch (err) {
+    console.error('Error updating inquiry status:', err);
+    res.status(500).json({ error: 'Failed to update inquiry status' });
+  }
+});
+// ──────────────────────────────────────────────────────────────────
+
 app.use('/api/auth',           require('./routes/auth'));
 app.use('/api/rooms',          require('./routes/rooms'));
 app.use('/api/room-instances', require('./routes/roomInstances'));
@@ -138,6 +203,18 @@ const PORT = process.env.PORT || 5000;
       try { await pool.query("ALTER TABLE reviews ADD COLUMN comment TEXT"); } catch (e) {}
       try { await pool.query("ALTER TABLE reviews ADD COLUMN user_id INT"); } catch (e) {}
       try { await pool.query("ALTER TABLE reviews ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (e) {}
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS inquiries (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          first_name VARCHAR(100) NOT NULL,
+          last_name VARCHAR(100),
+          email VARCHAR(150) NOT NULL,
+          message TEXT NOT NULL,
+          status ENUM('Pending', 'Resolved', 'Archived') DEFAULT 'Pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
     }
 
     app.listen(PORT, () => console.log(`✅ Backend running on http://localhost:${PORT}`));

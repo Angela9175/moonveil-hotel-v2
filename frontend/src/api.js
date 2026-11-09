@@ -93,6 +93,11 @@ export const api = {
   adminReviews:        () => request('/reviews'),
   deleteReview:        (id) => request(`/reviews/${id}`, { method: 'DELETE' }),
 
+  // ── Inquiries & Contact Us ───────────────────────────
+  submitInquiry:       (d) => request('/inquiries', { method: 'POST', body: d, auth: false }),
+  getInquiries:        () => request('/inquiries'),
+  updateInquiryStatus: (id, status) => request(`/inquiries/${id}/status`, { method: 'PATCH', body: { status } }),
+
   // ── Hotel (public) ───────────────────────────────────
   hotelInfo:     () => request('/hotel/info', { auth: false }),
   hotelSettings: () => request('/hotel/settings', { auth: false }),

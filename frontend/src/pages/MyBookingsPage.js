@@ -48,6 +48,7 @@ export default function MyBookingsPage() {
     try {
       const guestName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : (booking.guestName || 'Guest');
       await api.submitBookingReview({
+        bookingId: booking.id,
         roomId: booking.roomId || booking.room_id || null,
         roomName: booking.roomName || 'Room',
         guestName,
